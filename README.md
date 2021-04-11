@@ -3,6 +3,8 @@ This is a tool what be would help you when you split bills with your friend.
 
 ここからは日本語で書きます(英語かけないので)
 これは友達と割り勘をするときに役に立つline チャットボットツールです。
+LINE ID は「@059wlsop」です。
+よかったら友達追加してご利用ください。
 
 【基本的な使用方法】
 1. 友達追加する
