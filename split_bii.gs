@@ -1,6 +1,6 @@
 // @ts-nocheck
-const CHANEL_ACCESS_TOKEN = "ocuPtHMYo/mxS/l/jlBKP/ehu0UeVJtiWzogCqAKc15I1PjxFuhO8rncEVFg/vZNSYVLGwh052KMiyHlOagmuZFk4SMp+LB54TrOQrrQeVBjTLdSEUmIMkN4gnP7YwNt1CZIhlVaoOkZxjxdb91Y5gdB04t89/1O/w1cDnyilFU=";
-const SPREADSHEET = SpreadsheetApp.openById("1Jo8-tfHPZg67i2Sxya9D2cVV_s2Vu4zW1-g--4NWO3o");
+const CHANEL_ACCESS_TOKEN = "ACCESS_TOKEN";
+const SPREADSHEET = SpreadsheetApp.openById("SPREADSHEET_ID");
 const MONEY_SHEET = SPREADSHEET.getSheetByName("calc_money"); 
 const USER_SHEET = SPREADSHEET.getSheetByName("user_id");
 const DEBUG_SHEET = SPREADSHEET.getSheetByName("debug");
