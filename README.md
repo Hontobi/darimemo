@@ -1,5 +1,5 @@
 # darimemo
-This is a tool what be would help you when you split bills with your friend. 
+This is a tool what would help you when you split bills with your friends. 
 
 ここからは日本語で書きます(英語かけないので)
 これは友達と割り勘をするときに役に立つline チャットボットツールです。
@@ -9,7 +9,7 @@ LINE ID は「@059wlsop」です。
 【基本的な使用方法】
 1. 友達追加する
 2. なにか入力する
-3. 金額を積み上げるユニークなIDを入力します。
+3. 複数人で共通の場所に金額を積み上げるための合言葉のようなものを入力します。
    このlineでは「旅名」としています。
    同じ「旅名」を設定したメンバで金額を積み上げる形になります。
    例えば、Aさんが自身の画面で旅名を「カブの旅」と設定し、100円を入力
