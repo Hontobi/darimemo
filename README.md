@@ -1,5 +1,5 @@
 # darimemo
-This is a tool what would help you when you split bills with your friends. 
+This is a tool what would help you to split bill with your friends on a trip.
 
 ここからは日本語で書きます(英語かけないので)
 これは友達と割り勘をするときに役に立つline チャットボットツールです。
