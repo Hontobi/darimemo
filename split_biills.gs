@@ -147,7 +147,7 @@ function reply(e) {
 //問題なければTrue, そうでなければFalseを返す
 function chk_amount_money(price){
   try{
-    if (abs(price) > UPPER_PRICE){
+    if (Math.abs(price) > UPPER_PRICE){
       return false;
     }else {
       return true;
