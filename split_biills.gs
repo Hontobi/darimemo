@@ -10,6 +10,7 @@ const TABIMEI_COLUMN = 2; //2行目の旅名格納列
 const TABIMEI_UPPER_LIMIT = 20; //格納できる旅の種類の数
 const STATUS_ROW = 1; //MONEYSHEETのステータスをつかさどる行
 const HOLD_TABIMEI_DAYS = 2; //旅名を残しておく期間
+const UPPER_PRICE = 100000000; //大きすぎる金額はエラーにするための上限金額
 
 // ボットにメッセージ送信/フォロー/アンフォローした時の処理
 function doPost(e) {
@@ -37,7 +38,7 @@ function reply(e) {
                     "まずはこの旅の名前を決めて入力してね！\n" +
                     "複数人で金額を入力するときは、全員同じ旅名にしてね！" +
                     "その後、金額を積み上げて合計金額を表示するよ！\n\n" + 
-                    "「割り勘」と入力たら、今までその旅名で入力した金額の割り勘額を表示するよ！", e);
+                    "「割り勘」と入力したら、今までその旅名で入力した金額の割り勘額を表示するよ！", e);
       enter_user_status("初回表示終了", e);
       break;
     case "初回表示終了":
@@ -65,12 +66,14 @@ function reply(e) {
     case "割り勘人数待ち":
       if (isNaN(parseInt(e.message.text))){
         sentence = "割り勘人数を入力してください！";
+      }else if(!chk_more_1(parseInt(e.message.text))){
+        sentence = "人数は1以上の整数を入力してください！";
       }else{
         sentence = parseInt(e.message.text) + "人で割ると、全体金額の一人当たりの金額は、\n" + 
                    Math.ceil(get_whole_sum(e) / parseInt(e.message.text)) + "円で、\n" + 
                    "あなたが入力した金額の合計の一人当たりの金額は、\n" + 
                    Math.ceil(get_user_sum(e) / parseInt(e.message.text)) + "円です！";
-        enter_user_status("通過", e);           
+        enter_user_status("通過", e);      
       }
       send_message(sentence, e);
       break;
@@ -99,9 +102,14 @@ function reply(e) {
           enter_user_status("リセット確認待ち", e);
           break;
         case "割り勘":
-          send_message("割り勘ですね！人数を入力してください！", e);
-          enter_user_status("割り勘人数待ち",e);
-          break;
+          if (get_whole_sum(e) <= 0){
+            send_message("合計値が0の時は割り勘できません", e);
+            break;
+          }else{
+            send_message("割り勘ですね！人数を入力してください！", e);
+            enter_user_status("割り勘人数待ち",e);
+            break;
+          }
         case "userID":
           user_status = chk_user_status(e);
           send_message("あなたのユーザIDは\n" + 
@@ -115,6 +123,8 @@ function reply(e) {
         default:
           if (isNaN(parseInt(e.message.text))){
             sentence = "金額を入力してください！";
+          }else if (!chk_amount_money(parseInt(e.message.text))){
+            sentence = "入力された金額が大きすぎます。";
           }else{
             last_row = MONEY_SHEET.getRange(MONEY_SHEET.getMaxRows(), get_tabimei_column(e)).getNextDataCell(SpreadsheetApp.Direction.UP).getRow();
             MONEY_SHEET.getRange(last_row + 1, get_tabimei_column(e)).setValue(parseInt(e.message.text));
@@ -126,40 +136,80 @@ function reply(e) {
             sentence = parseInt(e.message.text) + "円、受け付けました！\n" + 
                        "現在の合計金額は" + whole_sum + "円で、\n" + 
                        "あなたが入力した合計金額は、" + user_sum + "円です！";
+
           }
           send_message(sentence, e);
           break;
       }
   }
 }
+//与えられた数値が一定金額がを超えていないかどうかを確認する関数
+//問題なければTrue, そうでなければFalseを返す
+function chk_amount_money(price){
+  try{
+    if (abs(price) > UPPER_PRICE){
+      return false;
+    }else {
+      return true;
+    }
+  } catch(error){
+    write_debug("chk_amout_moneyでエラーが発生しました。：" + error.message);
+    return false;
+  }
+}
+
+//与えられた数値が１以上かどうかチェックする
+//1以上ならTrue 1より小さいならFalseを返す
+function chk_more_1(amount){
+  try{
+     if (parseInt(amount) < 1){
+       return false;
+     }else{
+       return true;
+     }
+  } catch(error){
+    write_debug("chk_more_1でエラーが発生しました。：" + error.message);
+    return false;
+  }
+}
 //与えられたユーザが所属している旅名の金額の合計値を返す
 function get_whole_sum(e){
-  var last_row = MONEY_SHEET.getRange(MONEY_SHEET.getMaxRows(), get_tabimei_column(e)).getNextDataCell(SpreadsheetApp.Direction.UP).getRow();
-  var whole = MONEY_SHEET.getRange(2, get_tabimei_column(e), last_row + 1).getValues();
-  var whole_sum = 0;
-  for (var i = 0, len = whole.length; i < len; ++i){
-    whole_sum += Number(whole[i]);
+  try{
+    var last_row = MONEY_SHEET.getRange(MONEY_SHEET.getMaxRows(), get_tabimei_column(e)).getNextDataCell(SpreadsheetApp.Direction.UP).getRow();  
+    var user_sum = MONEY_SHEET.getRange(2, get_tabimei_column(e), last_row - 1, 1).getValues().reduce(function(prev, current){
+      return parseInt(prev) + parseInt(current[0]);
+    }, 0);
+    return user_sum;
   }
-  return whole_sum;
+  catch(error){
+    write_debug("get_whole_sumでエラーが発生しました" + error.message);
+  }
 }
 
 //与えられた文字列をデバッグ列に追加する
 function write_debug(sentence){
   var last_row = DEBUG_SHEET.getRange(DEBUG_SHEET.getMaxRows() , 1).getNextDataCell(SpreadsheetApp.Direction.UP).getRow();
   DEBUG_SHEET.getRange(last_row + 1 , 1).setValue(sentence);
+  DEBUG_SHEET.getRange(last_row + 1 , 2).setValue(dayjs.dayjs().add(13, 'h').format("YYYY/MM/DD HH:mm:ss"));
 }
 
 //与えられたユーザが所属している旅名でユーザが入力した金額の合計値を返す
 function get_user_sum(e){
-  var last_row = MONEY_SHEET.getRange(MONEY_SHEET.getMaxRows(), get_tabimei_column(e)).getNextDataCell(SpreadsheetApp.Direction.UP).getRow();  
-  var user_sum = MONEY_SHEET.getRange(2, get_tabimei_column(e), last_row + 1, 2).getValues().reduce(function(prev, current){
-    if(current[1] == e.source.userId){
-      return parseInt(prev) + parseInt(current[0]);
-    }else{
-      return parseInt(prev);
-    }
-  });
-  return user_sum;
+  try{
+    var last_row = MONEY_SHEET.getRange(MONEY_SHEET.getMaxRows(), get_tabimei_column(e)).getNextDataCell(SpreadsheetApp.Direction.UP).getRow();  
+    var user_sum = MONEY_SHEET.getRange(2, get_tabimei_column(e), last_row - 1, 2).getValues().reduce(function(prev, current){
+      if(current[1] == e.source.userId){
+        return parseInt(prev) + parseInt(current[0]);
+      }else{
+        return parseInt(prev);
+      }
+    }, 0);
+    return user_sum;
+  }
+  catch(error){
+    write_debug("get_user_sumでエラーが発生しました" + error.message);
+  }
+ 
 }
 
 //引数として与えられたユーザの旅名を格納した列を返す。なければ0を返す
@@ -283,7 +333,12 @@ function fetch_data(postData){
 
 /* フォローされた時の処理 */
 function follow(e) {
-  
+  send_message("初めまして！このbotは旅の割り勘を手助けするよ！\n" + 
+                "まずはこの旅の名前を決めて入力してね！\n" +
+                "複数人で金額を入力するときは、全員同じ旅名にしてね！" +
+                "その後、金額を積み上げて合計金額を表示するよ！\n\n" + 
+                "「割り勘」と入力たら、今までその旅名で入力した金額の割り勘額を表示するよ！", e);
+  enter_user_status("初回表示終了", e);
 }
 
 /* アンフォローされた時の処理 */
