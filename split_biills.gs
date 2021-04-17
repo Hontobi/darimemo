@@ -28,6 +28,11 @@ function doPost(e) {
 
 function reply(e) {
   //本文
+  if (!is_text(e)){
+    send_message("テキスト以外は受付できません…", e);
+    return;
+  }
+  var tmp;
   var sentence; 
   var last_row = 1
   var user_status;
@@ -42,9 +47,11 @@ function reply(e) {
       enter_user_status("初回表示終了", e);
       break;
     case "初回表示終了":
+      var tmp = conv_full_to_half(e.message.text);
+      tmp = conv_kana_half_full(tmp);
       exe_verrification("旅名は\n" + 
-                         e.message.text + "\n", e);
-      enter_user_tabimei(e.message.text, e);
+                         tmp + "\n", e);
+      enter_user_tabimei(tmp, e);
       enter_user_status("旅名確認中",e);
       break;
     case "旅名確認中":
@@ -64,15 +71,16 @@ function reply(e) {
     case "テスト":
       break;     
     case "割り勘人数待ち":
-      if (isNaN(parseInt(e.message.text))){
+      tmp = parseInt(conv_full_to_half(e.message.text));
+      if (isNaN(tmp)){
         sentence = "割り勘人数を入力してください！";
-      }else if(!chk_more_1(parseInt(e.message.text))){
+      }else if(!chk_more_1(tmp)){
         sentence = "人数は1以上の整数を入力してください！";
       }else{
-        sentence = parseInt(e.message.text) + "人で割ると、全体金額の一人当たりの金額は、\n" + 
-                   Math.ceil(get_whole_sum(e) / parseInt(e.message.text)) + "円で、\n" + 
+        sentence = tmp + "人で割ると、全体金額の一人当たりの金額は、\n" + 
+                   Math.ceil(get_whole_sum(e) / tmp) + "円で、\n" + 
                    "あなたが入力した金額の合計の一人当たりの金額は、\n" + 
-                   Math.ceil(get_user_sum(e) / parseInt(e.message.text)) + "円です！";
+                   Math.ceil(get_user_sum(e) / tmp) + "円です！";
         enter_user_status("通過", e);      
       }
       send_message(sentence, e);
@@ -121,19 +129,21 @@ function reply(e) {
           enter_user_status("初回表示終了",e);
           break;
         default:
-          if (isNaN(parseInt(e.message.text))){
+          tmp = parseInt(conv_full_to_half(e.message.text));
+          
+          if (isNaN(tmp)){
             sentence = "金額を入力してください！";
-          }else if (!chk_amount_money(parseInt(e.message.text))){
+          }else if (!chk_amount_money(tmp)){
             sentence = "入力された金額が大きすぎます。";
           }else{
             last_row = MONEY_SHEET.getRange(MONEY_SHEET.getMaxRows(), get_tabimei_column(e)).getNextDataCell(SpreadsheetApp.Direction.UP).getRow();
-            MONEY_SHEET.getRange(last_row + 1, get_tabimei_column(e)).setValue(parseInt(e.message.text));
+            MONEY_SHEET.getRange(last_row + 1, get_tabimei_column(e)).setValue(tmp);
             MONEY_SHEET.getRange(last_row + 1, get_tabimei_column(e) + 1).setValue(e.source.userId);
             //入力した日付を格納
             MONEY_SHEET.getRange(STATUS_ROW, get_tabimei_column(e) + 1).setValue(dayjs.dayjs().format());
             var user_sum = get_user_sum(e);
             var whole_sum = get_whole_sum(e);
-            sentence = parseInt(e.message.text) + "円、受け付けました！\n" + 
+            sentence = tmp + "円、受け付けました！\n" + 
                        "現在の合計金額は" + whole_sum + "円で、\n" + 
                        "あなたが入力した合計金額は、" + user_sum + "円です！";
 
@@ -143,6 +153,17 @@ function reply(e) {
       }
   }
 }
+
+
+//ユーザの内容がテキストであるかどうかチェック
+function is_text(e){
+  if (e.message.type == "text"){
+    return true;
+  }else{
+    return false;
+  }
+}
+
 //与えられた数値が一定金額がを超えていないかどうかを確認する関数
 //問題なければTrue, そうでなければFalseを返す
 function chk_amount_money(price){
@@ -338,6 +359,62 @@ function fetch_data(postData){
   };
   UrlFetchApp.fetch("https://api.line.me/v2/bot/message/reply", replyData);  
 }
+
+//全角記号・数字・英字を半角にする関数
+function conv_full_to_half(str){
+  //半角返還
+  try{
+    var half_val = str.replace(/[！-～]/g, 
+      function(tmp_str){
+        //文字コードシフト
+        return String.fromCharCode(tmp_str.charCodeAt(0) - 0xFEE0 );
+    });
+    // 文字コードシフトで対応できない文字の変換
+    return half_val.replace(/”/g, "\"")
+      .replace(/’/g, "'")
+      .replace(/‘/g, "`")
+      .replace(/￥/g, "\\")
+      .replace(/　/g, " ")
+      .replace(/〜/g, "~")
+      .replace(/＃/g, "#");
+  }
+  catch(error){
+    write_debug("conv_full_to_halfでエラーが発生しました。 :" + error.message);
+  }
+}
+
+//半角カタカナを全角カタカナに変換する関数
+function conv_kana_half_full(str) {
+  var kanaMap = {
+    'ｶﾞ': 'ガ', 'ｷﾞ': 'ギ', 'ｸﾞ': 'グ', 'ｹﾞ': 'ゲ', 'ｺﾞ': 'ゴ',
+    'ｻﾞ': 'ザ', 'ｼﾞ': 'ジ', 'ｽﾞ': 'ズ', 'ｾﾞ': 'ゼ', 'ｿﾞ': 'ゾ',
+    'ﾀﾞ': 'ダ', 'ﾁﾞ': 'ヂ', 'ﾂﾞ': 'ヅ', 'ﾃﾞ': 'デ', 'ﾄﾞ': 'ド',
+    'ﾊﾞ': 'バ', 'ﾋﾞ': 'ビ', 'ﾌﾞ': 'ブ', 'ﾍﾞ': 'ベ', 'ﾎﾞ': 'ボ',
+    'ﾊﾟ': 'パ', 'ﾋﾟ': 'ピ', 'ﾌﾟ': 'プ', 'ﾍﾟ': 'ペ', 'ﾎﾟ': 'ポ',
+    'ｳﾞ': 'ヴ', 'ﾜﾞ': 'ヷ', 'ｦﾞ': 'ヺ',
+    'ｱ': 'ア', 'ｲ': 'イ', 'ｳ': 'ウ', 'ｴ': 'エ', 'ｵ': 'オ',
+    'ｶ': 'カ', 'ｷ': 'キ', 'ｸ': 'ク', 'ｹ': 'ケ', 'ｺ': 'コ',
+    'ｻ': 'サ', 'ｼ': 'シ', 'ｽ': 'ス', 'ｾ': 'セ', 'ｿ': 'ソ',
+    'ﾀ': 'タ', 'ﾁ': 'チ', 'ﾂ': 'ツ', 'ﾃ': 'テ', 'ﾄ': 'ト',
+    'ﾅ': 'ナ', 'ﾆ': 'ニ', 'ﾇ': 'ヌ', 'ﾈ': 'ネ', 'ﾉ': 'ノ',
+    'ﾊ': 'ハ', 'ﾋ': 'ヒ', 'ﾌ': 'フ', 'ﾍ': 'ヘ', 'ﾎ': 'ホ',
+    'ﾏ': 'マ', 'ﾐ': 'ミ', 'ﾑ': 'ム', 'ﾒ': 'メ', 'ﾓ': 'モ',
+    'ﾔ': 'ヤ', 'ﾕ': 'ユ', 'ﾖ': 'ヨ',
+    'ﾗ': 'ラ', 'ﾘ': 'リ', 'ﾙ': 'ル', 'ﾚ': 'レ', 'ﾛ': 'ロ',
+    'ﾜ': 'ワ', 'ｦ': 'ヲ', 'ﾝ': 'ン',
+    'ｧ': 'ァ', 'ｨ': 'ィ', 'ｩ': 'ゥ', 'ｪ': 'ェ', 'ｫ': 'ォ',
+    'ｯ': 'ッ', 'ｬ': 'ャ', 'ｭ': 'ュ', 'ｮ': 'ョ',
+    '｡': '。', '､': '、', 'ｰ': 'ー', '｢': '「', '｣': '」', '･': '・'
+  };
+  var reg = new RegExp('(' + Object.keys(kanaMap).join('|') + ')', 'g');
+  return str
+    .replace(reg, function (match) {
+      return kanaMap[match];
+    })
+      .replace(/ﾞ/g, '゛')
+      .replace(/ﾟ/g, '゜');
+  };
+
  
 
 /* フォローされた時の処理 */
