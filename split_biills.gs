@@ -175,11 +175,15 @@ function chk_more_1(amount){
 //与えられたユーザが所属している旅名の金額の合計値を返す
 function get_whole_sum(e){
   try{
-    var last_row = MONEY_SHEET.getRange(MONEY_SHEET.getMaxRows(), get_tabimei_column(e)).getNextDataCell(SpreadsheetApp.Direction.UP).getRow();  
-    var user_sum = MONEY_SHEET.getRange(2, get_tabimei_column(e), last_row - 1, 1).getValues().reduce(function(prev, current){
-      return parseInt(prev) + parseInt(current[0]);
-    }, 0);
-    return user_sum;
+    var last_row = MONEY_SHEET.getRange(MONEY_SHEET.getMaxRows(), get_tabimei_column(e)).getNextDataCell(SpreadsheetApp.Direction.UP).getRow(); 
+    if (last_row == 1) {
+      return 0;
+    }else{
+      var user_sum = MONEY_SHEET.getRange(2, get_tabimei_column(e), last_row - 1, 1).getValues().reduce(function(prev, current){
+        return  isNaN(parseInt(current[0])) ? parseInt(prev) : parseInt(prev) + parseInt(current[0]);
+      }, 0);
+      return user_sum;
+    }
   }
   catch(error){
     write_debug("get_whole_sumでエラーが発生しました" + error.message);
@@ -196,15 +200,20 @@ function write_debug(sentence){
 //与えられたユーザが所属している旅名でユーザが入力した金額の合計値を返す
 function get_user_sum(e){
   try{
-    var last_row = MONEY_SHEET.getRange(MONEY_SHEET.getMaxRows(), get_tabimei_column(e)).getNextDataCell(SpreadsheetApp.Direction.UP).getRow();  
-    var user_sum = MONEY_SHEET.getRange(2, get_tabimei_column(e), last_row - 1, 2).getValues().reduce(function(prev, current){
-      if(current[1] == e.source.userId){
-        return parseInt(prev) + parseInt(current[0]);
-      }else{
-        return parseInt(prev);
-      }
-    }, 0);
-    return user_sum;
+    var last_row = MONEY_SHEET.getRange(MONEY_SHEET.getMaxRows(), get_tabimei_column(e)).getNextDataCell(SpreadsheetApp.Direction.UP).getRow(); 
+    if (last_row == 1){
+      return 0;
+    }
+    else{
+      var user_sum = MONEY_SHEET.getRange(2, get_tabimei_column(e), last_row - 1, 2).getValues().reduce(function(prev, current){
+        if(current[1] == e.source.userId && !isNaN(parseInt(current[0]))){
+          return parseInt(prev) + parseInt(current[0]);
+        }else{
+          return parseInt(prev);
+        }
+      }, 0);
+      return user_sum;
+    }
   }
   catch(error){
     write_debug("get_user_sumでエラーが発生しました" + error.message);
