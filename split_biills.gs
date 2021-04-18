@@ -57,7 +57,7 @@ function reply(e) {
     case "旅名確認中":
       if(e.message.text == "うん"){
         send_message("旅名を確定させました！\n" + 
-                      "以降、金額を入力してくれるとをそれを記録していきます！",e);
+                      "以降、金額を入力してくれるとそれを記録していきます！",e);
         if(get_tabimei_column(e) == 0){
           over_write_tabimei(e);
         }
